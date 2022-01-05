@@ -17,9 +17,11 @@
 
 package com.example.android.marsrealestate.overview
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.android.marsrealestate.network.MarsApi
 import com.example.android.marsrealestate.network.MarsProperty
 import kotlinx.coroutines.*
@@ -29,20 +31,10 @@ import kotlinx.coroutines.*
  */
 class OverviewViewModel : ViewModel() {
 
-    // The internal MutableLiveData String that stores the status of the most recent request
-    private val _status = MutableLiveData<String>()
+    private val _properties = MutableLiveData<List<MarsProperty>>()
 
-    // The external immutable LiveData for the request status String
-    val status: LiveData<String>
-        get() = _status
-
-    private val _property = MutableLiveData<MarsProperty>()
-
-    val property: LiveData<MarsProperty>
-        get() = _property
-
-    private val viewModelJob = Job()
-    private val coroutineScope = CoroutineScope(viewModelJob + Dispatchers.Main)
+    val properties: LiveData<List<MarsProperty>>
+        get() = _properties
 
     /**
      * Call getMarsRealEstateProperties() on init so we can display status immediately.
@@ -55,23 +47,17 @@ class OverviewViewModel : ViewModel() {
      * Sets the value of the status LiveData to the Mars API status.
      */
     private fun getMarsRealEstateProperties() {
-        coroutineScope.launch {
+        viewModelScope.launch {
             try {
-                val apiResponse = MarsApi.retrofitService.getPropertiesAsync().await()
-                _status.value = "Success ${apiResponse?.size} properties retrieved"
-
-                if(apiResponse?.size > 0) {
-                    _property.value = apiResponse.first()
+                val apiResponse = MarsApi.retrofitService.getProperties()
+                Log.i("MarsApi","Success ${apiResponse?.size} properties retrieved")
+                if (apiResponse.isNotEmpty()) {
+                    _properties.value = apiResponse
                 }
-            }
-            catch (t: Throwable) {
-                _status.value = "Failure: ${t.message}"
+            } catch (e: Exception) {
+                Log.i("MarsApi","Failure: ${e.message}")
             }
         }
     }
 
-    override fun onCleared() {
-        super.onCleared()
-        viewModelJob.cancel()
-    }
 }
