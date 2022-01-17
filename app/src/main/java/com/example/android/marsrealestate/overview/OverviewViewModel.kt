@@ -17,7 +17,6 @@
 
 package com.example.android.marsrealestate.overview
 
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -25,6 +24,8 @@ import androidx.lifecycle.viewModelScope
 import com.example.android.marsrealestate.network.MarsApi
 import com.example.android.marsrealestate.network.MarsProperty
 import kotlinx.coroutines.*
+
+enum class ApiResponseStatus { LOADING, ERROR, DONE }
 
 /**
  * The [ViewModel] that is attached to the [OverviewFragment].
@@ -35,6 +36,11 @@ class OverviewViewModel : ViewModel() {
 
     val properties: LiveData<List<MarsProperty>>
         get() = _properties
+
+    private val _status = MutableLiveData<ApiResponseStatus>()
+
+    val status: LiveData<ApiResponseStatus>
+        get() = _status
 
     /**
      * Call getMarsRealEstateProperties() on init so we can display status immediately.
@@ -49,13 +55,13 @@ class OverviewViewModel : ViewModel() {
     private fun getMarsRealEstateProperties() {
         viewModelScope.launch {
             try {
+                _status.value = ApiResponseStatus.LOADING
                 val apiResponse = MarsApi.retrofitService.getProperties()
-                Log.i("MarsApi","Success ${apiResponse?.size} properties retrieved")
-                if (apiResponse.isNotEmpty()) {
-                    _properties.value = apiResponse
-                }
+                _properties.value = apiResponse
+                _status.value = ApiResponseStatus.DONE
             } catch (e: Exception) {
-                Log.i("MarsApi","Failure: ${e.message}")
+                _status.value = ApiResponseStatus.ERROR
+                _properties.value = arrayListOf()
             }
         }
     }
